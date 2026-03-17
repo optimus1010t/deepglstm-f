@@ -6,6 +6,7 @@ from random import shuffle
 import torch
 import torch.nn as nn
 from models.gcn import GCNNet
+from models.esm_gcn import ESMGCNNet
 from utils import *
 from tqdm import tqdm
 
@@ -48,8 +49,13 @@ LOG_INTERVAL = 20
 
 def main(args):
   dataset = args.dataset
-  modeling = [GCNNet]
+  if args.model == 'ESM_GCN':
+      modeling = [ESMGCNNet]
+  else:
+      modeling = [GCNNet]
   model_st = modeling[0].__name__
+  if args.model == 'ESM_GCN' and not args.freeze_esm:
+      model_st += "_finetune"
 
   cuda_name = "cuda:0"
   print('cuda_name:', cuda_name)
@@ -73,7 +79,13 @@ def main(args):
     train_data = TestbedDataset(root='data', dataset=dataset+'_train')
     test_data = TestbedDataset(root='data', dataset=dataset+'_test')
     
-    if args.n_samples is not None:
+    if args.subset_frac is not None:
+        train_n = int(len(train_data) * args.subset_frac)
+        test_n = int(len(test_data) * args.subset_frac)
+        print(f"Subsetting data to {args.subset_frac*100}% ({train_n} train, {test_n} test samples).")
+        train_data = train_data[:train_n]
+        test_data = test_data[:test_n]
+    elif args.n_samples is not None:
         print(f"Subsetting data to {args.n_samples} samples.")
         train_data = train_data[:args.n_samples]
         test_data = test_data[:args.n_samples]
@@ -86,7 +98,10 @@ def main(args):
 
     # training the model
     device = torch.device(cuda_name if torch.cuda.is_available() else "cpu")
-    model = modeling[0](k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device).to(device)
+    if args.model == 'ESM_GCN':
+        model = modeling[0](device=device, freeze_esm=args.freeze_esm).to(device)
+    else:
+        model = modeling[0](k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     best_mse = 1000
     best_ci = 0
@@ -164,6 +179,10 @@ if __name__ == "__main__":
                       help="Where to save the trained model. For example davis.model")
   
   parser.add_argument("--n_samples", type=int, default=None, help="Number of samples to use for training/testing (subset)")
+  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use for training/testing (e.g. 0.3 for 30%)")
+
+  parser.add_argument("--model", type=str, default="DeepGLSTM", help="Model to use (DeepGLSTM or ESM_GCN)")
+  parser.add_argument("--freeze_esm", action="store_true", help="Freeze ESM embeddings if using ESM_GCN")
 
 
   args = parser.parse_args()

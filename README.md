@@ -42,6 +42,7 @@ Please refer to [instructions.md](instructions.md) for detailed steps on:
 - Training the model
 - Running inference
 - Reproducing paper tables
+- Running Pick-and-Plug ESM-2 + GCN Architecture (with optional data subsets and automated experiment scripts)
 
 ## Pretrained Models and Dataset <a name="premod-data"></a>
 ### Pretrained Models download links <a name="P-down"></a>

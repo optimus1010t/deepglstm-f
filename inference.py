@@ -6,6 +6,7 @@ from random import shuffle
 import torch
 import torch.nn as nn
 from models.gcn import GCNNet
+from models.esm_gcn import ESMGCNNet
 from torch_geometric.loader import DataLoader
 from utils import *
 from tqdm import tqdm
@@ -28,7 +29,10 @@ def predicting(model, device, loader):
 
 def main(args):
   dataset = args.dataset
-  modelings = [GCNNet]
+  if args.model == 'ESM_GCN':
+      modelings = [ESMGCNNet]
+  else:
+      modelings = [GCNNet]
   cuda_name = "cuda:0"
   print('cuda_name:', cuda_name)
   rate_=[]
@@ -48,7 +52,10 @@ def main(args):
       model_st = modeling.__name__
       print('\npredicting for ', dataset, ' using ', model_st)
       device = torch.device(cuda_name if torch.cuda.is_available() else "cpu")
-      model = modeling(k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device).to(device)
+      if args.model == 'ESM_GCN':
+          model = modeling(device=device, freeze_esm=args.freeze_esm).to(device)
+      else:
+          model = modeling(k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device).to(device)
       model_file_name = args.load_model
       if os.path.isfile(model_file_name):
         param_dict = torch.load(model_file_name)
@@ -93,6 +100,9 @@ if __name__ == "__main__":
       "--load_model",type=str,
       default="pretrained_model/davis.model", help="Load a pretrained model"
   )
+
+  parser.add_argument("--model", type=str, default="DeepGLSTM", help="Model to use (DeepGLSTM or ESM_GCN)")
+  parser.add_argument("--freeze_esm", action="store_true", help="Freeze ESM embeddings if using ESM_GCN")
 
   args = parser.parse_args()
   print(args)

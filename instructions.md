@@ -141,3 +141,33 @@ python3 reproduce_table.py --table 6 --epoch 1000
 python3 reproduce_table.py --table both --epoch 1000
 ```
 Change `--epoch` to a smaller number (e.g., 10) for testing.
+
+## 3. Newly Added: ESM-2 + GCN Architecture
+
+We recently integrated the ESM-2 pre-trained protein language model (`facebook/esm2_t33_650M_UR50D`) linked with a custom GCN context to improve prediction power! 
+
+### 3.1 Pick-and-Plug Models During Training
+To run the standard `DeepGLSTM`, you do not need to change anything since `--model DeepGLSTM` is the default.
+If you wish to switch models, use the `--model` flag. For example:
+```bash
+python3 training.py --dataset davis --model ESM_GCN
+```
+If you wish to freeze the ESM-2 representations during training (which is faster and uses less memory), add the `--freeze_esm` option:
+```bash
+python3 training.py --dataset davis --model ESM_GCN --freeze_esm
+```
+
+### 3.2 Running on Subset of Data
+If you only wish to test the model dynamically on a fraction of the dataset, you can now use the `--subset_frac` argument:
+```bash
+python3 training.py --dataset davis --subset_frac 0.3 --epoch 400
+```
+This command trains the model for `400` epochs on just `30%` of the davis data. This argument applies identically across models.
+
+### 3.3 Running Automated Experiments
+There is a new script available `run_experiments.py` to trigger full ablations with `ESM_GCN`. It accepts arguments dynamically, just like `training.py`:
+```bash
+# This recreates the datasets internally and starts training the benchmarking models!
+# E.g. Run 400 epochs on 30% of the dataset
+python3 run_experiments.py --subset_frac 0.3 --epoch 400
+```

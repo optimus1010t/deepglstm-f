@@ -5,3 +5,5 @@ networkx>=3.0
 rdkit
 tqdm
 matplotlib
+torch_sparse
+pytorch_geometric
