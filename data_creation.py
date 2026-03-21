@@ -78,24 +78,29 @@ def main(args):
   processed_data_file_train = 'data/processed/' + dataset + '_train.pt'
   processed_data_file_test = 'data/processed/' + dataset + '_test.pt'
   if ((not os.path.isfile(processed_data_file_train)) or (not os.path.isfile(processed_data_file_test))):
-    print("Loading ESM Tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
+    if args.use_esm:
+      print("Loading ESM Tokenizer...")
+      tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
     
     df = pd.read_csv('data/' + dataset + '_train.csv')
     train_drugs, train_prots,  train_Y = list(df['compound_iso_smiles']),list(df['target_sequence']),list(df['affinity'])
-    print("Tokenizing train proteins for ESM...")
-    train_esm = tokenizer(train_prots, truncation=True, max_length=1024, padding='max_length', return_tensors='pt')
-    train_esm_ids = [train_esm['input_ids'][i] for i in tqdm(range(len(train_prots)), desc='Extracting train ESM IDs')]
-    train_esm_mask = [train_esm['attention_mask'][i] for i in tqdm(range(len(train_prots)), desc='Extracting train ESM Masks')]
+    train_esm_ids, train_esm_mask = None, None
+    if args.use_esm:
+      print("Tokenizing train proteins for ESM...")
+      train_esm = tokenizer(train_prots, truncation=True, max_length=1024, padding='max_length', return_tensors='pt')
+      train_esm_ids = [train_esm['input_ids'][i] for i in tqdm(range(len(train_prots)), desc='Extracting train ESM IDs')]
+      train_esm_mask = [train_esm['attention_mask'][i] for i in tqdm(range(len(train_prots)), desc='Extracting train ESM Masks')]
     XT = [seq_cat(t) for t in tqdm(train_prots, desc="Categorizing train sequences")]
     train_drugs, train_prots,  train_Y = np.asarray(train_drugs), np.asarray(XT), np.asarray(train_Y)
     
     df = pd.read_csv('data/' + dataset + '_test.csv')
     test_drugs, test_prots,  test_Y = list(df['compound_iso_smiles']),list(df['target_sequence']),list(df['affinity'])
-    print("Tokenizing test proteins for ESM...")
-    test_esm = tokenizer(test_prots, truncation=True, max_length=1024, padding='max_length', return_tensors='pt')
-    test_esm_ids = [test_esm['input_ids'][i] for i in tqdm(range(len(test_prots)), desc='Extracting test ESM IDs')]
-    test_esm_mask = [test_esm['attention_mask'][i] for i in tqdm(range(len(test_prots)), desc='Extracting test ESM Masks')]
+    test_esm_ids, test_esm_mask = None, None
+    if args.use_esm:
+      print("Tokenizing test proteins for ESM...")
+      test_esm = tokenizer(test_prots, truncation=True, max_length=1024, padding='max_length', return_tensors='pt')
+      test_esm_ids = [test_esm['input_ids'][i] for i in tqdm(range(len(test_prots)), desc='Extracting test ESM IDs')]
+      test_esm_mask = [test_esm['attention_mask'][i] for i in tqdm(range(len(test_prots)), desc='Extracting test ESM Masks')]
     XT = [seq_cat(t) for t in tqdm(test_prots, desc="Categorizing test sequences")]
     test_drugs, test_prots,  test_Y = np.asarray(test_drugs), np.asarray(XT), np.asarray(test_Y)
 
@@ -114,6 +119,7 @@ def main(args):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Creation of dataset")
   parser.add_argument("--dataset",type=str,default='davis',help="Dataset Name (davis,kiba,DTC,Metz,ToxCast,Stitch)")
+  parser.add_argument("--use_esm",action="store_true",help="Whether to extract ESM features")
   args = parser.parse_args()
   print(args)
   main(args)

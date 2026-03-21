@@ -75,6 +75,11 @@ python3 data_creation.py --dataset kiba
 
 Default is `davis`. Ensure the raw CSV files for the dataset (e.g., `kiba_train.csv`, `kiba_test.csv`) are present in the `data/` directory.
 
+**Using ESM Embeddings:**
+If you plan to use the `ESM_GCN` model, you must also pass the `--use_esm` flag to extract protein representations using ESM-2:
+```bash
+python3 data_creation.py --dataset davis --use_esm
+```
 ### 2.2 Model Training
 Run the `training.py` script to train the model. You can specify the dataset using the `--dataset` argument.
 
@@ -165,9 +170,15 @@ python3 training.py --dataset davis --subset_frac 0.3 --epoch 400
 This command trains the model for `400` epochs on just `30%` of the davis data. This argument applies identically across models.
 
 ### 3.3 Running Automated Experiments
-There is a new script available `run_experiments.py` to trigger full ablations with `ESM_GCN`. It accepts arguments dynamically, just like `training.py`:
+There is a new script available `run_experiments.py` to trigger full ablations. It accepts arguments dynamically, just like `training.py`:
 ```bash
-# This recreates the datasets internally and starts training the benchmarking models!
+# This recreates the datasets internally and starts training the base DeepGLSTM benchmarking models on Davis and KIBA
 # E.g. Run 400 epochs on 30% of the dataset
 python3 run_experiments.py --subset_frac 0.3 --epoch 400
+```
+
+**Testing ESM_GCN Models:**
+If you want to extract ESM embeddings during data creation and run the `ESM_GCN` models as well, pass the `--use_esm` flag:
+```bash
+python3 run_experiments.py --use_esm --subset_frac 0.3 --epoch 400
 ```
