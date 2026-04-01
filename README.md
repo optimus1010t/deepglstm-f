@@ -43,6 +43,7 @@ Please refer to [instructions.md](instructions.md) for detailed steps on:
 - Running inference
 - Reproducing paper tables
 - Running Pick-and-Plug ESM-2 + GCN Architecture (with optional data subsets and automated experiment scripts)
+- **[NEW]** Using Attention Mechanisms (`self`, `cross`, `both`) instead of concatenation for fusing drug and target embeddings.
 
 ## Pretrained Models and Dataset <a name="premod-data"></a>
 ### Pretrained Models download links <a name="P-down"></a>
@@ -82,7 +83,7 @@ Plots showing DeepGLSTM versus measured binding affinity values for the (a)  Dav
 ## Citation  <a name="cite"></a>
 Please cite our paper if it's helpful to you in your research.
 
-```bibtext 
+```bibtext
 @inbook{doi:10.1137/1.9781611977172.82,
 author = {Shrimon Mukherjee and Madhusudan Ghosh and Partha Basuchowdhuri},
 title = {DeepGLSTM: Deep Graph Convolutional Network and LSTM based approach for predicting drug-target binding affinity},

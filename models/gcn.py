@@ -6,9 +6,10 @@ import torch_sparse
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, global_max_pool as gmp
+from models.attention import AttentionModule
 
 class GCNNet(torch.nn.Module):
-  def __init__(self, k1, k2, k3, embed_dim, num_layer, device, num_feature_xd=78, n_output=1, num_feature_xt=25, output_dim=128, dropout=0.2, layer_configs=None):
+  def __init__(self, k1, k2, k3, embed_dim, num_layer, device, num_feature_xd=78, n_output=1, num_feature_xt=25, output_dim=128, dropout=0.2, layer_configs=None, use_attention=False, attention_type='both'):
     super(GCNNet, self).__init__()
     self.device = device
     # Smile graph branch
@@ -60,7 +61,7 @@ class GCNNet(torch.nn.Module):
 
     # Re-calculating fc_g1_input_dim
     fc_g1_input_dim = 0
-    
+
     # Helper to get output dim of a layer index (1-based)
     def get_layer_out_dim(layer_idx):
         if layer_idx == 1: return num_feature_xd
@@ -78,7 +79,7 @@ class GCNNet(torch.nn.Module):
     if self.k2 == 2 and len(self.layer_configs) >= 2:
         layers = self.layer_configs[1]
         fc_g1_input_dim += get_layer_out_dim(layers)
-        
+
     # Block 3 (k3=3)
     if self.k3 == 3 and len(self.layer_configs) >= 3:
         layers = self.layer_configs[2]
@@ -100,6 +101,10 @@ class GCNNet(torch.nn.Module):
     self.embedding_xt = nn.Embedding(num_feature_xt + 1, embed_dim)
     self.LSTM_xt_1 = nn.LSTM(self.embed_dim, self.embed_dim, self.num_layer, batch_first=True, bidirectional=True)
     self.fc_xt = nn.Linear(1000 * 256, output_dim)
+
+    self.use_attention = use_attention
+    if self.use_attention:
+        self.attention = AttentionModule(dim1=output_dim, dim2=output_dim, hidden_dim=output_dim, attention_type=attention_type)
 
     # combined layers
     self.fc1 = nn.Linear(2 * output_dim, 1024)
@@ -153,20 +158,20 @@ class GCNNet(torch.nn.Module):
         # But to be safe and independent:
         if 'edge_index_square' not in locals():
              edge_index_square, _ = torch_sparse.spspmm(edge_index, None, edge_index, None, adj.shape[1], adj.shape[1], adj.shape[1], coalesced=True)
-        
+
         edge_index_cube, _ = torch_sparse.spspmm(edge_index_square, None, edge_index, None, adj.shape[1], adj.shape[1], adj.shape[1], coalesced=True)
         out = run_layers(x, edge_index_cube, self.layer_configs[2])
         block_outputs.append(out)
-    
+
     # Block 4 - Assuming simple expansion if we had a k4 flag or just implied by layer_configs length > 3?
-    # The original code only passed k1, k2, k3. 
+    # The original code only passed k1, k2, k3.
     # The table has "4th block". This implies A^4.
     # Let's support it if layer_configs has 4 elements AND we modify how we call it.
     if len(self.layer_configs) >= 4:
         # We need A^4 = A^2 * A^2 or A^3 * A
         if 'edge_index_square' not in locals():
              edge_index_square, _ = torch_sparse.spspmm(edge_index, None, edge_index, None, adj.shape[1], adj.shape[1], adj.shape[1], coalesced=True)
-        
+
         # A^4 = A^2 * A^2
         edge_index_quad, _ = torch_sparse.spspmm(edge_index_square, None, edge_index_square, None, adj.shape[1], adj.shape[1], adj.shape[1], coalesced=True)
         out = run_layers(x, edge_index_quad, self.layer_configs[3])
@@ -192,8 +197,12 @@ class GCNNet(torch.nn.Module):
     xt = LSTM_xt.contiguous().view(-1, 1000 * 256)
     xt = self.fc_xt(xt)
 
-    # concat
-    xc = torch.cat((x, xt), 1)
+    # fusion
+    if hasattr(self, 'use_attention') and self.use_attention:
+        xc = self.attention(x, xt)
+    else:
+        xc = torch.cat((x, xt), 1)
+
     # add some dense layers
     xc = self.fc1(xc)
     xc = self.relu(xc)

@@ -67,6 +67,8 @@ def main(args):
       dataset += f"_frac_{args.subset_frac}"
   elif args.n_samples is not None:
       dataset += f"_samples_{args.n_samples}"
+  if args.use_esm:
+      dataset += "_esm"
 
   compound_iso_smiles = []
   opts = ['train','test']
@@ -138,7 +140,7 @@ if __name__ == '__main__':
   parser.add_argument("--dataset",type=str,default='davis',help="Dataset Name (davis,kiba,DTC,Metz,ToxCast,Stitch)")
   parser.add_argument("--use_esm",action="store_true",help="Whether to extract ESM features")
   parser.add_argument("--n_samples", type=int, default=None, help="Number of samples to use for processing (subset)")
-  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use for processing (e.g. 0.3 for 30%)")
+  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use for processing (e.g. 0.3 for 30%%)")
   args = parser.parse_args()
   print(args)
   main(args)

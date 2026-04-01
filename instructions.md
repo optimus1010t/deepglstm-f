@@ -149,7 +149,7 @@ Change `--epoch` to a smaller number (e.g., 10) for testing.
 
 ## 3. Newly Added: ESM-2 + GCN Architecture
 
-We recently integrated the ESM-2 pre-trained protein language model (`facebook/esm2_t33_650M_UR50D`) linked with a custom GCN context to improve prediction power! 
+We recently integrated the ESM-2 pre-trained protein language model (`facebook/esm2_t33_650M_UR50D`) linked with a custom GCN context to improve prediction power!
 
 ### 3.1 Pick-and-Plug Models During Training
 To run the standard `DeepGLSTM`, you do not need to change anything since `--model DeepGLSTM` is the default.
@@ -181,4 +181,23 @@ python3 run_experiments.py --dataset davis --subset_frac 0.3 --epoch 400
 If you want to extract ESM embeddings during data creation and run the `ESM_GCN` models as well, pass the `--use_esm` flag:
 ```bash
 python3 run_experiments.py --use_esm --subset_frac 0.3 --epoch 400
+```
+
+### 3.4 Attention Mechanism
+
+We have introduced a powerful multi-head attention module that allows you to replace the standard fusion (concatenation) of drug and target embeddings with attention-based fusion. It can be easily used with both the standard `DeepGLSTM` and `ESM_GCN` models.
+
+You can enable it by passing the `--use_attention` flag:
+```bash
+python3 training.py --dataset davis --use_attention
+```
+
+You can also specify the exact type of attention to use (`self`, `cross`, or `both`) with `--attention_type`:
+```bash
+python3 training.py --dataset davis --use_attention --attention_type cross
+```
+
+These flags are fully supported in `inference.py` and `run_experiments.py` as well:
+```bash
+python3 run_experiments.py --use_attention --attention_type both
 ```

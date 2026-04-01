@@ -53,7 +53,9 @@ def main(args):
       dataset += f"_frac_{args.subset_frac}"
   elif args.n_samples is not None:
       dataset += f"_samples_{args.n_samples}"
-      
+  if args.model == 'ESM_GCN':
+      dataset += "_esm"
+
   if args.model == 'ESM_GCN':
       modeling = [ESMGCNNet]
   else:
@@ -68,7 +70,7 @@ def main(args):
   TRAIN_BATCH_SIZE = args.batch_size
   TEST_BATCH_SIZE = args.batch_size
   LR = args.lr
-  
+
   NUM_EPOCHS = args.epoch
 
   print('Learning rate: ', LR)
@@ -83,7 +85,7 @@ def main(args):
   else:
     train_data = TestbedDataset(root='data', dataset=dataset+'_train')
     test_data = TestbedDataset(root='data', dataset=dataset+'_test')
-    
+
     # make data PyTorch mini-batch processing ready
     drop_last_train = len(train_data) > TRAIN_BATCH_SIZE
     drop_last_test = len(test_data) > TEST_BATCH_SIZE
@@ -93,9 +95,9 @@ def main(args):
     # training the model
     device = torch.device(cuda_name if torch.cuda.is_available() else "cpu")
     if args.model == 'ESM_GCN':
-        model = modeling[0](device=device, freeze_esm=args.freeze_esm).to(device)
+        model = modeling[0](device=device, freeze_esm=args.freeze_esm, use_attention=args.use_attention, attention_type=args.attention_type).to(device)
     else:
-        model = modeling[0](k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device).to(device)
+        model = modeling[0](k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device, use_attention=args.use_attention, attention_type=args.attention_type).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
     best_mse = 1000
     best_ci = 0
@@ -119,8 +121,8 @@ def main(args):
               os.makedirs(model_dir)
           model_file_name = os.path.join(model_dir, args.save_file + '.model')
           torch.save(model.state_dict(), model_file_name)
-        
-        
+
+
         with open(result_file_name,'w') as f:
           f.write('rmse,mse,pearson,spearman,ci,rm2\n')
           f.write(','.join(map(str,ret)))
@@ -132,14 +134,14 @@ def main(args):
         print('rmse improved at epoch ', best_epoch, '; best_mse,best_ci:', best_mse,best_ci,model_st,dataset)
       else:
         print(ret[1],'No improvement since epoch ', best_epoch, '; best_mse,best_ci:', best_mse,best_ci,model_st,dataset)
-    
+
     print(f"\nTraining finished.")
     print(f"Best results saved to: {os.path.abspath(result_file_name)}")
     if args.save_file:
         model_dir = 'pretrained_model'
         model_file_name = os.path.join(model_dir, args.save_file + '.model')
         print(f"Best model saved to: {os.path.abspath(model_file_name)}")
-   
+
     plot_dir = 'plots/training'
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
@@ -156,27 +158,29 @@ if __name__ == "__main__":
                       type = int,
                       default = 1000,
                       help="Number of training epochs. Default is 1000."
-                      ) 
-  
+                      )
+
   parser.add_argument("--lr",
                       type=float,
                       default = 0.0005,
                       help="learning rate",
                       )
-  
+
   parser.add_argument("--batch_size",type=int,
                       default = 128,
                       help = "Number of drug-tareget per batch. Default is 128 for davis.") # batch 128 for Davis
-  
+
   parser.add_argument("--save_file",type=str,
                       default=None,
                       help="Where to save the trained model. For example davis.model")
-  
+
   parser.add_argument("--n_samples", type=int, default=None, help="Number of samples to use for training/testing (subset)")
-  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use for training/testing (e.g. 0.3 for 30%)")
+  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use for training/testing (e.g. 0.3 for 30%%)")
 
   parser.add_argument("--model", type=str, default="DeepGLSTM", help="Model to use (DeepGLSTM or ESM_GCN)")
   parser.add_argument("--freeze_esm", action="store_true", help="Freeze ESM embeddings if using ESM_GCN")
+  parser.add_argument("--use_attention", action="store_true", help="Use attention mechanism instead of concatenation")
+  parser.add_argument("--attention_type", type=str, default="both", choices=["self", "cross", "both"], help="Type of attention to use (self, cross, both)")
 
 
   args = parser.parse_args()

@@ -33,6 +33,8 @@ def main(args):
       dataset += f"_frac_{args.subset_frac}"
   elif args.n_samples is not None:
       dataset += f"_samples_{args.n_samples}"
+  if args.model == 'ESM_GCN':
+      dataset += "_esm"
 
   if args.model == 'ESM_GCN':
       modelings = [ESMGCNNet]
@@ -58,14 +60,14 @@ def main(args):
       print('\npredicting for ', dataset, ' using ', model_st)
       device = torch.device(cuda_name if torch.cuda.is_available() else "cpu")
       if args.model == 'ESM_GCN':
-          model = modeling(device=device, freeze_esm=args.freeze_esm).to(device)
+          model = modeling(device=device, freeze_esm=args.freeze_esm, use_attention=args.use_attention, attention_type=args.attention_type).to(device)
       else:
-          model = modeling(k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device).to(device)
+          model = modeling(k1=1,k2=2,k3=3,embed_dim=128,num_layer=1,device=device, use_attention=args.use_attention, attention_type=args.attention_type).to(device)
       model_file_name = args.load_model
       if os.path.isfile(model_file_name):
         param_dict = torch.load(model_file_name)
-        model.load_state_dict(param_dict)            
-        G,P = predicting(model, device, test_loader)    
+        model.load_state_dict(param_dict)
+        G,P = predicting(model, device, test_loader)
         plot_dir = 'plots/inference'
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
@@ -84,7 +86,7 @@ def main(args):
     f.write('dataset,model,rmse,mse,pearson,spearman,ci,rm2\n')
     for ret in result:
       f.write(','.join(map(str,ret) ) + '\n')
-  
+
   print(f"Prediction Done! Results saved to: {os.path.abspath(file_name)}")
 
 
@@ -108,8 +110,10 @@ if __name__ == "__main__":
 
   parser.add_argument("--model", type=str, default="DeepGLSTM", help="Model to use (DeepGLSTM or ESM_GCN)")
   parser.add_argument("--freeze_esm", action="store_true", help="Freeze ESM embeddings if using ESM_GCN")
+  parser.add_argument("--use_attention", action="store_true", help="Use attention mechanism instead of concatenation")
+  parser.add_argument("--attention_type", type=str, default="both", choices=["self", "cross", "both"], help="Type of attention to use")
   parser.add_argument("--n_samples", type=int, default=None, help="Number of samples to use (subset)")
-  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use (e.g. 0.3 for 30%)")
+  parser.add_argument("--subset_frac", type=float, default=None, help="Fraction of samples to use (e.g. 0.3 for 30%%)")
 
   args = parser.parse_args()
   print(args)
