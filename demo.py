@@ -644,14 +644,14 @@ def process_example(choice_label, theme_mode):
 
 
 def create_ui():
-    with gr.Blocks(title="DeepGLSTM ESM-2 Attention Explorer") as demo:
+    with gr.Blocks(title="DeepGLSTM and ESM + Attention Explorer") as demo:
         with gr.Row(elem_classes=["topbar-row"]):
             with gr.Column(scale=8, min_width=760):
                 gr.Markdown(
                     """
 <div class="panel">
-<h1>DeepGLSTM + ESM-2 Attention Explorer</h1>
-<p>Explore one Davis drug-protein pair at a time and inspect embedding + attention math in a single dashboard.</p>
+<h1>DeepGLSTM and ESM + Attention Explorer</h1>
+<p>Explore Davis drug-protein pairs at a time and inspect embedding + attention math.</p>
 </div>
                     """
                 )
